@@ -1,0 +1,21 @@
+# Build
+FROM golang:alpine AS build
+
+WORKDIR /app
+
+COPY go.mod ./
+# COPY go.sum ./
+RUN go mod download
+
+COPY *.go ./
+RUN go build -o /ky-backend
+
+# Deploy
+FROM alpine:latest
+
+WORKDIR /
+
+COPY --from=build /ky-backend /ky-backend
+
+ENTRYPOINT ["/ky-backend"]
+LABEL org.opencontainers.image.description "https://github.com/kylixor/kyAPI"
