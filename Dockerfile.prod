@@ -18,4 +18,4 @@ WORKDIR /
 COPY --from=build /ky-backend /ky-backend
 
 ENTRYPOINT ["/ky-backend"]
-LABEL org.opencontainers.image.description "https://github.com/kylixor/kyAPI"
+LABEL org.opencontainers.image.source "https://github.com/kylixor/kyAPI"
