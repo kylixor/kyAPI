@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 type BarData struct {
@@ -18,40 +18,33 @@ type GraphData struct {
 	Bars   []BarData `json:"datasets"`
 }
 
-func helloWorld(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	fmt.Fprintf(w, "Hello World 2.0!")
+func helloWorld(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"hello": "world"})
 }
 
-func fakeData(w http.ResponseWriter, r *http.Request) {
-	// var data GraphData
-	// data.Labels = append(data.Labels, "January", "February", "March")
-	// var barData BarData
-	// barData.Label = "Wordle Score"
-	// barData.BackgroundColor = "#f87979"
-	// barData.Data = append(barData.Data, 40, 20, 12)
-	// data.Bars = append(data.Bars, barData)
+func fakeData(c *gin.Context) {
 	newData := GraphData{
 		Labels: []string{"January", "February", "March"},
 		Bars: []BarData{
 			{
 				Label:           "Wordle Score",
-				BackgroundColor: "#f87979",
-				Data:            []int{40, 20, 12},
+				BackgroundColor: "#336699",
+				Data:            []int{10, 20, 30},
 			},
 		},
 	}
-	jsonResp, _ := json.Marshal(newData)
-	// w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Write(jsonResp)
+	c.JSON(http.StatusOK, newData)
 }
 
 func main() {
-	http.HandleFunc("/", helloWorld)
-	http.HandleFunc("/fake-data", fakeData)
-	fmt.Println("Starting web server on 3000...")
-	if err := http.ListenAndServe(":3000", nil); err != nil {
-		log.Fatal(err)
-	}
+	router := gin.Default()
+
+	config := cors.DefaultConfig()
+	// config.AllowOrigins = []string{"http://google.com", "http://facebook.com"}
+	config.AllowAllOrigins = true
+
+	router.Use(cors.New(config))
+	router.GET("/", helloWorld)
+	router.GET("/fake-data", fakeData)
+	router.Run(":3000")
 }
