@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/csv"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -38,6 +40,14 @@ type WordleData struct {
 	FirstWordScore string
 }
 
+func randomHex(n int) string {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(bytes)
+}
+
 func helloWorld(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"hello": "world"})
 }
@@ -51,15 +61,29 @@ func fakeData(c *gin.Context) {
 		calendar[day_index] = WORDLE_DAY_0.AddDate(0, 0, day_index).Format("Jan 2 06")
 	}
 
-	file, err := os.Open("wordle.csv")
+	file, err := os.Open("player.csv")
 	if err != nil {
 		fmt.Println(err)
 	}
 	reader := csv.NewReader(file)
-	records, _ := reader.ReadAll()
+	player_data, _ := reader.ReadAll()
+	file.Close()
 
-	wordle_data := []WordleData{}
-	for _, line := range records {
+	var players []string
+	for _, line := range player_data {
+		players = append(players, line[0])
+	}
+
+	file, err = os.Open("wordle.csv")
+	if err != nil {
+		fmt.Println(err)
+	}
+	reader = csv.NewReader(file)
+	wordle_records, _ := reader.ReadAll()
+	file.Close()
+
+	var wordle_data []WordleData
+	for _, line := range wordle_records {
 		day, _ := strconv.Atoi(line[4])
 		score, _ := strconv.Atoi(line[5])
 		data := WordleData{
@@ -78,28 +102,35 @@ func fakeData(c *gin.Context) {
 	}
 
 	// for each user
-	wordle_stats := make([]int, days_since_wordle_began)
-	first_day := 0
-	for stat_index := range wordle_stats {
-		for _, wordle := range wordle_data {
-			if stat_index == wordle.Day && wordle.UserID == "144220178853396480" {
-				wordle_stats[stat_index] = wordle.Score
-				if first_day == 0 {
-					first_day = stat_index
+	earliest_score := int(days_since_wordle_began)
+	var bar_data []BarData
+	for _, player_id := range players {
+		stats := make([]int, days_since_wordle_began)
+		for stat_index := range stats {
+			for _, wordle := range wordle_data {
+				if stat_index == wordle.Day && wordle.UserID == player_id {
+					stats[stat_index] = wordle.Score
+					if stat_index < earliest_score {
+						earliest_score = stat_index
+					}
 				}
 			}
 		}
+		bar := BarData{
+			Label:           player_id,
+			BackgroundColor: fmt.Sprintf("#%s", randomHex(3)),
+			Data:            stats,
+		}
+		bar_data = append(bar_data, bar)
+	}
+
+	for index, bars := range bar_data {
+		bar_data[index].Data = bars.Data[earliest_score:]
 	}
 
 	newData := GraphData{
-		Labels: calendar[first_day:],
-		Bars: []BarData{
-			{
-				Label:           "Andrew",
-				BackgroundColor: "#336699",
-				Data:            wordle_stats[first_day:],
-			},
-		},
+		Labels: calendar[earliest_score:],
+		Bars:   bar_data,
 	}
 	c.JSON(http.StatusOK, newData)
 }
@@ -113,6 +144,6 @@ func main() {
 
 	router.Use(cors.New(config))
 	router.GET("/", helloWorld)
-	router.GET("/fake-data", fakeData)
-	router.Run(":3000")
+	router.GET("/graph", fakeData)
+	router.Run(":8000")
 }
