@@ -7,8 +7,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
+
+	"kyapi/controllers"
+	"kyapi/models"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -136,14 +140,30 @@ func fakeData(c *gin.Context) {
 }
 
 func main() {
+	exePath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exeDir := filepath.Dir(exePath)
+	dataDir := filepath.Join(exeDir, "data")
+	_ = os.Mkdir(dataDir, os.ModePerm)
+	models.ConnectDatabase(filepath.Join(dataDir, "db.sqlite"))
+
 	router := gin.Default()
-
 	config := cors.DefaultConfig()
-	// config.AllowOrigins = []string{"http://google.com", "http://facebook.com"}
 	config.AllowAllOrigins = true
-
 	router.Use(cors.New(config))
+	router.SetTrustedProxies([]string{"127.0.0.1"})
+
 	router.GET("/", helloWorld)
 	router.GET("/graph", fakeData)
-	router.Run(":8000")
+
+	router.GET("/users", controllers.FindDiscordUsers)
+	router.GET("/user/:id", controllers.FindDiscordUser)
+	router.POST("/user", controllers.CreateDiscordUser)
+	router.PUT("/user/:id", controllers.UpdateDiscordUser)
+
+	router.POST("/wordle", controllers.CreateWordleGame)
+
+	router.Run("localhost:8000")
 }
