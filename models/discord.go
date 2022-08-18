@@ -7,9 +7,9 @@ import (
 )
 
 type DiscordUser struct {
-	ID                 string `gorm:"primaryKey"` // Discord User ID
-	Username           string
-	Discriminator      string // Unique identifier (#4712)
+	ID                 string `json:"id" binding:"required" gorm:"primaryKey"` // Discord User ID
+	Username           string `json:"username"`
+	Discriminator      string `json:"discriminator"`
 	GetWordleReminders bool
 	WordleGames        []WordleGame `gorm:"foreignKey:UserID;references:ID"`
 	WordleStats        WordleStat   `gorm:"foreignKey:UserID;references:ID"`
@@ -17,10 +17,10 @@ type DiscordUser struct {
 
 func GetOrCreateDiscordUser(id string) (*DiscordUser, error) {
 	var user DiscordUser
-	tx := DB.Take(&user, id)
-	if tx.Error == nil {
+	err := DB.Take(&user, id).Error
+	if err == nil {
 		return &user, nil
-	} else if tx.Error == gorm.ErrRecordNotFound {
+	} else if err == gorm.ErrRecordNotFound {
 		user := DiscordUser{
 			ID: id,
 		}
@@ -30,7 +30,7 @@ func GetOrCreateDiscordUser(id string) (*DiscordUser, error) {
 		}
 		return &user, nil
 	} else {
-		return nil, tx.Error
+		return nil, err
 	}
 }
 

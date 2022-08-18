@@ -7,16 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type NewDiscordUser struct {
-	Id string `json:"id" binding:"required"`
-}
-
-type DiscordUserUpdate struct {
-	Id            string `json:"id"`
-	Username      string `json:"username"`
-	Discriminator string `json:"discriminator"`
-}
-
 func FindDiscordUser(c *gin.Context) {
 	var user models.DiscordUser
 	if err := models.DB.Where("id = ?", c.Param("id")).First(user).Error; err != nil {
@@ -32,7 +22,7 @@ func FindDiscordUsers(c *gin.Context) {
 }
 
 func CreateDiscordUser(c *gin.Context) {
-	var user NewDiscordUser
+	var user models.DiscordUser
 
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -40,7 +30,7 @@ func CreateDiscordUser(c *gin.Context) {
 	}
 
 	newUser := models.DiscordUser{
-		ID:                 user.Id,
+		ID:                 user.ID,
 		Username:           "",
 		Discriminator:      "",
 		WordleGames:        nil,
@@ -68,7 +58,7 @@ func UpdateDiscordUser(c *gin.Context) {
 		return
 	}
 
-	var updateUser DiscordUserUpdate
+	var updateUser models.DiscordUser
 
 	if err := c.ShouldBindJSON(&updateUser); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
